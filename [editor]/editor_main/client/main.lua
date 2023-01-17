@@ -214,11 +214,15 @@ addEventHandler("onClientRender", root,
 			local camX2, camY2, camZ2 = getCameraMatrix()
 			local distance = math.sqrt( (targetX - camX2)^2 + (targetY - camY2)^2 + (targetZ - camZ2)^2 )
 			local roundedDistance = string.format("%." .. (DISTANCE_DECIMAL_PLACES) .. "f", distance)
-			createHighlighterText ( labelCenterX,labelCenterY,
-							getElementID(g_targetedElement) or "",
-							"["..getElementType(g_targetedElement).."]",
-							roundedDistance .. " m"
-			)
+			local elementName = getElementID(g_targetedElement) or ""
+			local mapContainer = getElementByID("mapContainer")
+			if mapContainer then
+				if getElementParent(g_targetedElement) ~= mapContainer then
+					elementName = "Non-editable object " .. getElementModel(g_targetedElement)
+				end
+			end
+			
+			createHighlighterText(labelCenterX, labelCenterY, elementName, "["..getElementType(g_targetedElement).."]", roundedDistance .. " m")
 		else
 			if g_targetedElement then
 				g_targetedPart = nil
@@ -730,13 +734,22 @@ function disableGameHUD()
 end
 
 -- PUBLIC
-function selectElement(element, submode, shortcut, dropreleaseLock, dropclonedrop)
+function selectElement(element, submode, shortcut, dropreleaseLock, dropclonedrop, ignoreProperties)
 	local openProperties
 	submode = submode or g_submode
 
 	if not isElement(element) then return end
 	
 	if isColPatchObject(element) then return end
+
+	-- Fixes error when try to edit static object created by script
+	local mapContainer = getElementByID("mapContainer")
+	if mapContainer then
+		if getElementParent(element) ~= mapContainer then
+			editor_gui.outputMessage("Cannot select element, it is created by a different script", 255,255,255)
+			return
+		end
+	end
 
 	if getElementType(element) == "vehicle" and getVehicleType(element) == "Train" then
 		setTrainDerailed(element, true)
@@ -802,8 +815,10 @@ function selectElement(element, submode, shortcut, dropreleaseLock, dropclonedro
 			createArrowMarker(handle)
 		end
 	else
-		editor_gui.openPropertiesBox( element, false, shortcut )
-		openProperties = true
+		if not ignoreProperties then
+			editor_gui.openPropertiesBox( element, false, shortcut )
+			openProperties = true
+		end
 	end
 
 	triggerServerEvent("doLockElement", element)
@@ -954,7 +969,7 @@ end
 
 -- sets the maximum distance at which an element can be selected
 function setMaxSelectDistance(distance)
-	assert((distance >= 0), "Distance must be a positive number")
+	assert((distance >= 0), "Distance must be a positive number.")
 	g_maxSelectDistance = distance
 	return true
 end
@@ -975,7 +990,10 @@ function getMaxSelectDistance()
 	return g_maxSelectDistance
 end
 
-function destroySelectedElement()
+function destroySelectedElement(key)
+	if key then return
+		editor_gui.restoreSelectedElement()
+	 end
 	if g_selectedElement then
 		local element = g_selectedElement
 		dropElement(false)
