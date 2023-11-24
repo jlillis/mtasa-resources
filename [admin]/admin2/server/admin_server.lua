@@ -342,7 +342,7 @@ addEventHandler(
     "aServerGlitchRefresh",
     root,
     function()
-        triggerClientEvent("aClientRefresh", client, isGlitchEnabled("quickreload"), isGlitchEnabled("fastmove"), isGlitchEnabled("fastfire"), isGlitchEnabled("crouchbug"), isGlitchEnabled("highcloserangedamage"), isGlitchEnabled("hitanim"), isGlitchEnabled("fastsprint"), isGlitchEnabled("baddrivebyhitbox"), isGlitchEnabled("quickstand"))
+        triggerClientEvent("aClientRefresh", client, isGlitchEnabled("quickreload"), isGlitchEnabled("fastmove"), isGlitchEnabled("fastfire"), isGlitchEnabled("crouchbug"), isGlitchEnabled("highcloserangedamage"), isGlitchEnabled("hitanim"), isGlitchEnabled("fastsprint"), isGlitchEnabled("baddrivebyhitbox"), isGlitchEnabled("quickstand"), isGlitchEnabled("kickoutofvehicle_onmodelreplace"))
     end
 )
 
@@ -445,38 +445,14 @@ addEventHandler(
     end
 )
 
-addEvent("aExecute", true)
-addEventHandler(
-    "aExecute",
-    root,
-    function(action, echo)
-        if (hasObjectPermissionTo(source, "command.execute")) then
-            local result = loadstring("return " .. action)()
-            if (echo == true) then
-                local restring = ""
-                if (type(result) == "table") then
-                    for k, v in pairs(result) do
-                        restring = restring .. tostring(v) .. ", "
-                    end
-                    restring = string.sub(restring, 1, -3)
-                    restring = "Table (" .. restring .. ")"
-                elseif (type(result) == "userdata") then
-                    restring = "Element (" .. getElementType(result) .. ")"
-                else
-                    restring = tostring(result)
-                end
-                outputChatBox("Command executed! Result: " .. restring, source, 0, 0, 255)
-            end
-            outputServerLog("ADMIN: " .. getPlayerName(source) .. " executed command: " .. action)
-        end
-    end
-)
-
 addEvent("aAdminChat", true)
 addEventHandler(
     "aAdminChat",
     root,
     function(chat)
+        if #chat > ADMIN_CHAT_MAXLENGTH then
+            return
+        end
         for id, player in ipairs(getElementsByType("player")) do
             if (aPlayers[player]["chat"]) then
                 triggerClientEvent(player, "aClientAdminChat", source, chat)
